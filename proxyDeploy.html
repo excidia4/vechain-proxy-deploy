@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deploy Proxy Contract on VeChain</title>
+</head>
+<body>
+
+    <h2>Deploy Proxy Contract on VeChain</h2>
+
+    <!-- Network Selection -->
+    <label for="networkSelect">Select Network:</label>
+    <select id="networkSelect">
+        <option value="test">Testnet</option>
+        <option value="main">Mainnet</option>
+    </select>
+
+    <!-- Form for entering Bytecode and Implementation Address -->
+    <form id="deployForm">
+        <label for="bytecode">Bytecode of the Proxy Contract:</label><br>
+        <textarea id="bytecode" rows="4" cols="50" required>[PLACEHOLDER_FOR_BYTECODE]</textarea><br><br>
+
+        <label for="implementationAddress">Implementation Address of the Logic Contract:</label><br>
+        <input type="text" id="implementationAddress" value="[PLACEHOLDER_FOR_IMPLEMENTATION_ADDRESS]" required><br><br>
+
+        <button type="button" id="deployButton">Deploy Contract</button>
+    </form>
+
+    <p id="output"></p>
+
+    <!-- Include Connex and web3.js libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@vechain/connex@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.6.1/dist/web3.min.js"></script>
+    <script>
+        let selectedNetwork = 'test';
+        let connex;
+        let web3;
+
+        // Function to update network selection
+        document.getElementById('networkSelect').addEventListener('change', function() {
+            selectedNetwork = this.value;
+            initializeLibraries();
+        });
+
+        // Initialize Connex and Web3
+        function initializeLibraries() {
+            connex = new Connex({
+                node: selectedNetwork === 'test' ? 'https://testnet.veblocks.net/' : 'https://mainnet.veblocks.net/',
+                network: selectedNetwork
+            });
+            web3 = new Web3();
+        }
+
+        // Function to deploy the contract
+        async function deployContract(bytecode, implementationAddress) {
+            if (!bytecode || !implementationAddress) {
+                alert('Bytecode or Implementation Address is missing.');
+                return;
+            }
+
+            try {
+                // Encode implementation address as hex string
+                const encodedAddress = web3.eth.abi.encodeParameter("address", `0x${implementationAddress}`).slice(2);
+                
+                // Combine bytecode and encoded address
+                const data = `0x${bytecode}${encodedAddress}`;
+
+                const clauses = [{
+                    to: null, 
+                    value: "0x0",
+                    data: data
+                }];
+
+                // Deploy contract
+                const txResponse = await connex.vendor.sign('tx', clauses).request();
+                console.log('Transaction Response:', txResponse);
+                document.getElementById('output').innerText = 'Contract successfully deployed!';
+
+            } catch (err) {
+                console.error('Error deploying contract:', err);
+                document.getElementById('output').innerText = 'Error deploying: ' + err.message;
+            }
+        }
+
+        // Initialize Connex and Web3 on page load
+        initializeLibraries();
+
+        // Event listener for deploy button
+        document.getElementById('deployButton').addEventListener('click', function() {
+            const bytecode = document.getElementById('bytecode').value.trim();
+            const implementationAddress = document.getElementById('implementationAddress').value.trim();
+            deployContract(bytecode, implementationAddress);
+        });
+    </script>
+</body>
+</html>
